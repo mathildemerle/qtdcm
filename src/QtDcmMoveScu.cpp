@@ -393,12 +393,12 @@ void QtDcmMoveScu::addOverrideKey ( const QString & key )
             dicName = key.toLatin1().data(); // only dictionary name given (without value)
         }
         
-        // try to lookup in dictionary
+        // try to lookup in Global DICOM Data Dictionary (GlobalDcmDataDictionary)
         DcmTagKey key ( 0xffff, 0xffff );
         const DcmDataDictionary& globalDataDict = dcmDataDict.rdlock();
         const DcmDictEntry *dicent = globalDataDict.findEntry ( dicName.c_str() );
 
-        dcmDataDict.unlock();
+        dcmDataDict.rdunlock();
 
         if ( dicent != NULL ) {
             // found dictionary name, copy group and element number
@@ -786,7 +786,13 @@ void QtDcmMoveScu::storeSCPCallback ( void *callbackData, T_DIMSE_StoreProgress 
 
             if ( ( rsp->DimseStatus == STATUS_Success ) && !self->d->ignore ) {
                 /* which SOP class and SOP instance ? */
-                if ( !DU_findSOPClassAndInstanceInDataSet ( *imageDataSet, sopClass, sopInstance, self->d->correctUIDPadding ) ) {
+                if ( !DU_findSOPClassAndInstanceInDataSet(*imageDataSet,
+                                                          sopClass,
+                                                          sizeof(sopClass),
+                                                          sopInstance,
+                                                          sizeof(sopInstance),
+                                                          self->d->correctUIDPadding ) )
+                {
                     rsp->DimseStatus = STATUS_STORE_Error_CannotUnderstand;
                 }
                 else if ( strcmp ( sopClass, req->AffectedSOPClassUID ) != 0 ) {
@@ -862,8 +868,6 @@ void QtDcmMoveScu::subOpCallback ( void * caller, T_ASC_Network *aNet, T_ASC_Ass
 {
     if ( !caller )
         return;
-
-    QtDcmMoveScu * self = reinterpret_cast<QtDcmMoveScu * >(caller);
 
     if ( aNet == NULL ) return; /* help no net ! */
 
@@ -957,10 +961,16 @@ OFCondition QtDcmMoveScu::moveSCU ( T_ASC_Association * assoc, const char *fname
 
     req.DataSetType = DIMSE_DATASET_PRESENT;
 
-    if ( d->moveDestination == NULL ) {
+    if ( d->moveDestination == nullptr )
+    {
         /* set the destination to be me */
-        ASC_getAPTitles ( assoc->params, req.MoveDestination,
-                          NULL, NULL );
+        ASC_getAPTitles(assoc->params,
+                        req.MoveDestination,
+                        sizeof(req.MoveDestination),
+                        nullptr,
+                        0,
+                        nullptr,
+                        0);
     }
     else {
         strcpy( req.MoveDestination, d->moveDestination );
