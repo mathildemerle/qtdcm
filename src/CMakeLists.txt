@@ -112,7 +112,6 @@ set(${PROJECT_NAME}_LIBRARIES
   Qt5::Core
   Qt5::Widgets
   Qt5::Network
-  ${DCMTK_LIBRARIES}
   ITKIOImageBase
   ITKCommon
   ITKIOBMP
